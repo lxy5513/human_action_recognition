@@ -18,6 +18,7 @@ class Demo(IO):
     """
     def start(self):
 
+        #  import ipdb;ipdb.set_trace()
         openpose = '{}/examples/openpose/openpose.bin'.format(self.arg.openpose)
         video_name = self.arg.video.split('/')[-1].split('.')[0]
         output_snippets_dir = './data/openpose_estimation/snippets/{}'.format(video_name)
@@ -29,13 +30,13 @@ class Demo(IO):
         with open(label_name_path) as f:
             label_name = f.readlines()
             label_name = [line.rstrip() for line in label_name]
-    
+
         # pose estimation
         openpose_args = dict(
             video=self.arg.video,
             write_json=output_snippets_dir,
             display=0,
-            render_pose=0, 
+            render_pose=0,
             model_pose='COCO')
         command_line = openpose + ' '
         command_line += ' '.join(['--{} {}'.format(k, v) for k, v in openpose_args.items()])
@@ -67,7 +68,9 @@ class Demo(IO):
         # extract feature
         print('\nNetwork forwad...')
         self.model.eval()
-        output, feature = self.model.extract_feature(data)
+        #ferry mul-GPU add module
+        #  output, feature = self.model.extract_feature(data)
+        output, feature = self.model.module.extract_feature(data)
         output = output[0]
         feature = feature[0]
         intensity = (feature*feature).sum(dim=0)**0.5
@@ -80,7 +83,9 @@ class Demo(IO):
         print('\nVisualization...')
         label_sequence = output.sum(dim=2).argmax(dim=0)
         label_name_sequence = [[label_name[p] for p in l ]for l in label_sequence]
-        edge = self.model.graph.edge
+        #ferry mul-GPU
+        #  edge = self.model.graph.edge
+        edge = self.model.module.graph.edge
         images = utils.visualization.stgcn_visualize(
             pose, edge, intensity, video,label_name[label] , label_name_sequence, self.arg.height)
         print('Done.')
@@ -111,7 +116,7 @@ class Demo(IO):
             default='./resource/media/skateboarding.mp4',
             help='Path to video')
         parser.add_argument('--openpose',
-            default='3dparty/openpose/build',
+            default='/home/xyliu/experiments/openpose/build',
             help='Path to openpose')
         parser.add_argument('--output_dir',
             default='./data/demo_result',
